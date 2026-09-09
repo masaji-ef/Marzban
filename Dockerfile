@@ -6,9 +6,18 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /code
 
+# Устанавливаем curl и unzip, скачиваем Xray 26.3.27
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential curl unzip gcc python3-dev libpq-dev \
-    && curl -L https://github.com/Gozargah/Marzban-scripts/raw/master/install_latest_xray.sh | bash \
+    && apt-get install -y --no-install-recommends curl unzip \
+    && curl -L https://github.com/XTLS/Xray-core/releases/download/v26.3.27/Xray-linux-64.zip -o /tmp/xray.zip \
+    && unzip /tmp/xray.zip -d /tmp/xray \
+    && mkdir -p /usr/local/share/xray \
+    && install -m 755 /tmp/xray/xray /usr/local/bin/xray \
+    && install -m 644 /tmp/xray/geoip.dat /usr/local/share/xray/geoip.dat \
+    && install -m 644 /tmp/xray/geosite.dat /usr/local/share/xray/geosite.dat \
+    && rm -rf /tmp/xray /tmp/xray.zip \
+    && apt-get remove -y curl unzip \
+    && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY ./requirements.txt /code/
@@ -29,7 +38,6 @@ COPY --from=build /usr/local/share/xray /usr/local/share/xray
 COPY . /code
 
 RUN ln -s /code/marzban-cli.py /usr/bin/marzban-cli \
-    && chmod +x /usr/bin/marzban-cli \
-    && marzban-cli completion install --shell bash
+    && chmod +x /usr/bin/marzban-cli
 
 CMD ["bash", "-c", "alembic upgrade head; python main.py"]
